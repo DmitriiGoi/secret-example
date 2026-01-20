@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secret-example-configtree
+  namespace: secret-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secret-example-configtree
+  template:
+    metadata:
+      labels:
+        app: secret-example-configtree
+    spec:
+      containers:
+      - name: secret-example
+        image: goydmitriy/secret-example-app:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Tell Spring Boot to import the configtree from the mounted volume
+        - name: SPRING_CONFIG_IMPORT
+          value: "configtree:/etc/config/"
+        volumeMounts:
+        - name: secret-volume
+          mountPath: "/etc/config"
+          readOnly: true
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: secret-app

@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secret-example-spring-cloud
+  namespace: secret-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secret-example-spring-cloud
+  template:
+    metadata:
+      labels:
+        app: secret-example-spring-cloud
+    spec:
+      serviceAccountName: spring-cloud-k8s-sa
+      containers:
+      - name: secret-example
+        image: goydmitriy/secret-example-app:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Enable spring cloud kubernetes config and secret
+        - name: SPRING_CLOUD_KUBERNETES_CONFIG_ENABLED
+          value: "true"
+        - name: SPRING_CLOUD_KUBERNETES_SECRETS_ENABLED
+          value: "true"
+        # Optional: specified which secrets to read
+        - name: SPRING_CLOUD_KUBERNETES_SECRETS_SOURCES_0_NAME
+          value: "secret-app"

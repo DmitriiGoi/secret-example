@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secret-example-sidecar
+  namespace: secret-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secret-example-sidecar
+  template:
+    metadata:
+      labels:
+        app: secret-example-sidecar
+    spec:
+      containers:
+      - name: secret-example
+        image: goydmitriy/secret-example-app:latest
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: vault-secrets
+          mountPath: /etc/secrets
+          readOnly: true
+      - name: vault-agent
+        image: hashicorp/vault:latest
+        args:
+          - agent
+          - -config=/etc/vault/config.hcl
+        volumeMounts:
+        - name: vault-secrets
+          mountPath: /etc/secrets
+        - name: vault-config
+          mountPath: /etc/vault
+      volumes:
+      - name: vault-secrets
+        emptyDir: {}
+      - name: vault-config
+        configMap:
+          name: vault-agent-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-agent-config
+  namespace: secret-example
+data:
+  config.hcl: |
+    exit_after_auth = false
+    pid_file = "/home/vault/pid"
+
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "auth/kubernetes"
+        config = {
+          role = "example-role"
+        }
+      }
+
+      sink "file" {
+        config = {
+          path = "/home/vault/.vault-token"
+        }
+      }
+    }
+
+    template {
+      contents = <<EOH
+      {{ with secret "secret/data/myapp/config" }}
+      db.password: {{ .Data.data.password }}
+      {{ end }}
+      EOH
+      destination = "/etc/secrets/vault-secret.txt"
+    }

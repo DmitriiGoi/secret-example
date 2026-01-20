@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secret-example-env
+  namespace: secret-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secret-example-env
+  template:
+    metadata:
+      labels:
+        app: secret-example-env
+    spec:
+      containers:
+      - name: secret-example
+        image: goydmitriy/secret-example-app:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # 1. Mapping a specific secret key to an environment variable
+        - name: SECRET_CONFIG_TREE
+          valueFrom:
+            secretKeyRef:
+              name: secret-app
+              key: secret-config-tree
+        # 2. Another mapping, used by Spring Boot property 'secret-env-variable'
+        - name: SECRET_ENV_VARIABLE
+          valueFrom:
+            secretKeyRef:
+              name: secret-app
+              key: secret-env-variable
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secret-example-env
+  namespace: secret-example
+spec:
+  selector:
+    app: secret-example-env
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
