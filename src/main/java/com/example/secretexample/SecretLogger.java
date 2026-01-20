@@ -1,10 +1,9 @@
 package com.example.secretexample;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -14,9 +13,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Component
-public class SecretController implements ApplicationRunner {
+public class SecretLogger {
 
-    private static final Logger logger = LoggerFactory.getLogger(SecretController.class);
+    private static final Logger logger = LoggerFactory.getLogger(SecretLogger.class);
 
     // Injected via environment variable (standard K8s env injection)
     @Value("${SECRET_CONFIG_TREE:Not Set}")
@@ -37,8 +36,8 @@ public class SecretController implements ApplicationRunner {
     @Value("${secret-spring-k8s-api:Not Set}")
     private String secretSpringK8sApi;
 
-    @Override
-    public void run(ApplicationArguments args) {
+    @PostConstruct
+    public void logSecrets() {
         Map<String, String> secrets = new HashMap<>();
         secrets.put("secret-config-tree (from env)", secretConfigTreeFromEnv);
         secrets.put("secret-env-variable (from property/env)", secretEnvVariable);
