@@ -17,6 +17,7 @@ spec:
       containers:
       - name: secret-example
         image: goydmitriy/secret-example-app:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         env:
