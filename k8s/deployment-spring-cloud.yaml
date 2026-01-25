@@ -21,11 +21,6 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        # Enable spring cloud kubernetes config and secret
-        - name: SPRING_CLOUD_KUBERNETES_CONFIG_ENABLED
-          value: "true"
-        - name: SPRING_CLOUD_KUBERNETES_SECRETS_ENABLED
-          value: "true"
-        # Optional: specified which secrets to read
-        - name: SPRING_CLOUD_KUBERNETES_SECRETS_SOURCES_0_NAME
-          value: "secret-app"
+        # Enable spring cloud kubernetes config and secret using the new import way
+        - name: SPRING_CONFIG_IMPORT
+          value: "kubernetes:configmap/secret-app,kubernetes:secret/secret-app"

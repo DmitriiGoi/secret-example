@@ -1,9 +1,10 @@
 package com.example.secretexample;
 
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -36,7 +37,7 @@ public class SecretLogger {
     @Value("${secret-spring-k8s-api:Not Set}")
     private String secretSpringK8sApi;
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void logSecrets() {
         Map<String, String> secrets = new HashMap<>();
         secrets.put("secret-config-tree (from env)", secretConfigTreeFromEnv);
@@ -49,7 +50,7 @@ public class SecretLogger {
         secrets.put("secret-volume (from volume)", readFile("/etc/secrets/secret-volume"));
 
         // Reading secret from a Vault Agent sidecar-mounted volume
-        secrets.put("secret-vault (from sidecar)", readFile("/etc/secrets/vault-secret.txt"));
+        secrets.put("secret-vault (from sidecar)", readFile("/etc/vault-secrets/vault-secret.txt"));
 
         logger.info("--- Loaded Secrets ---");
         secrets.forEach((key, value) -> logger.info("{}: {}", key, value));

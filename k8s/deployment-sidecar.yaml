@@ -72,5 +72,5 @@ data:
       db.password: {{ .Data.data.password }}
       {{ end }}
       EOH
-      destination = "/etc/secrets/vault-secret.txt"
+      destination = "/etc/vault-secrets/vault-secret.txt"
     }
