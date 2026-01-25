@@ -93,3 +93,41 @@ spec:
       port: 80
       targetPort: 8080
   type: LoadBalancer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-agent-config
+  namespace: secret-example
+data:
+  config.hcl: |
+    exit_after_auth = false
+    pid_file = "/home/vault/pid"
+
+    template {
+      contents = <<EOH
+      {{ with secret "secret/data/myapp/config" }}
+      password: {{ .Data.data.password }}
+      {{ end }}
+      EOH
+      destination = "/etc/vault-secrets/vault-secret.txt"
+    }
+
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "auth/kubernetes"
+        config = {
+          role = "example-role"
+        }
+      }
+
+      sink "file" {
+        config = {
+          path = "/home/vault/.vault-token"
+        }
+      }
+    }
+
+    vault {
+      address = "http://vault.secret-example.svc:8200"
+    }

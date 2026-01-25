@@ -2,9 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vault
-  namespace: default
-  labels:
-    app: vault
+  namespace: secret-example
 spec:
   replicas: 1
   selector:
@@ -15,18 +13,28 @@ spec:
       labels:
         app: vault
     spec:
+      serviceAccountName: vault-sa
       containers:
       - name: vault
-        image: alpine:latest
-        command: ["sh", "-c", "while true; do echo -e \"HTTP/1.1 200 OK\n\n Mock Vault Ready\" | nc -l -p 8200; done"]
+        image: hashicorp/vault:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8200
+        env:
+        - name: VAULT_DEV_ROOT_TOKEN_ID
+          value: "root"
+        - name: VAULT_ADDR
+          value: "http://0.0.0.0:8200"
+        args:
+        - server
+        - -dev
+        - -dev-listen-address=0.0.0.0:8200
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: vault
-  namespace: default
+  namespace: secret-example
 spec:
   selector:
     app: vault
