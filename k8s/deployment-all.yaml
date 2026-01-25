@@ -46,16 +46,16 @@ spec:
           mountPath: /etc/vault-secrets
           readOnly: true
       - name: vault-agent
-        image: alpine:latest
-        command: ["sh", "-c"]
+        image: hashicorp/vault:latest
+        imagePullPolicy: Always
         args:
-          - |
-            echo "vault-secret: mock secret value from sidecar" > /etc/vault-secrets/vault-secret.txt;
-            echo "Mock Vault secret created. Sleeping...";
-            sleep infinity
+          - agent
+          - -config=/etc/vault/config.hcl
         volumeMounts:
         - name: vault-secrets
           mountPath: /etc/vault-secrets
+        - name: vault-config
+          mountPath: /etc/vault
       volumes:
       - name: configtree-volume
         secret:
