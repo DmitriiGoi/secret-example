@@ -56,43 +56,55 @@ To build the image to a local Docker daemon:
    kubectl apply -f k8s/namespace.yaml
    ```
 
-2. **Apply the Secret**:
+2. **Apply the RBAC and Secrets**:
    ```bash
    kubectl apply -f k8s/secret.yaml
+   kubectl apply -f k8s/rbac.yaml
    ```
 
-3. **Deploy the App (choose one)**:
-   - For Env Var method: `kubectl apply -f k8s/deployment-env.yaml`
-   - For Volume method: `kubectl apply -f k8s/deployment-volume.yaml`
-   - For ConfigTree method: `kubectl apply -f k8s/deployment-configtree.yaml`
-   - For Spring Cloud method: `kubectl apply -f k8s/rbac.yaml` then `kubectl apply -f k8s/deployment-spring-cloud.yaml`
-   - For Sidecar method: `kubectl apply -f k8s/deployment-sidecar.yaml` (Note: requires a running Vault instance and Kubernetes Auth method configured in Vault)
-
-4. **Verify**:
-   Once the pod is running, you can access the `/secrets` endpoint to see the injected values.
-   Note: You may need to use `kubectl get pods -n secret-example` to find the pod name or IP.
+3. **Deploy the Vault Server**:
    ```bash
-   kubectl exec --stdin --tty secret-example-configtree-bddc9b94c-jrs4r -- curl localhost:8080/secrets
+   kubectl apply -f k8s/vault-server.yaml
    ```
-   ```json
-   {
-       "secret-config-tree (from env)": "secret value for config tree",
-       "secret-volume (from volume)": "secret value for volume",
-       "secret-spring-k8s-api (from Spring Cloud K8s)": "secret value for spring k8s api",
-       "secret-env-variable (from property/env)": "secret value for env variable",
-       "secret-config-tree (from configtree)": "secret value for config tree",
-       "secret-volume (from configtree)": "secret value for volume",
-       "secret-vault (from sidecar)": "File not found or unreadable: /etc/secrets/vault-secret.txt"
-   }
+
+4. **Initialize Vault Secrets**:
+   Since the Vault server is running in `-dev` mode, you need to manually enable the Kubernetes authentication and inject the secret:
+   ```bash
+   # Get the Vault pod name
+   $VAULT_POD=$(kubectl get pods -n secret-example -l app=vault -o jsonpath='{.items[0].metadata.name}')
+
+   # Enable Kubernetes Auth and Configure it
+   kubectl exec $VAULT_POD -n secret-example -- sh -c "VAULT_TOKEN=root vault auth enable kubernetes"
+   kubectl exec $VAULT_POD -n secret-example -- sh -c "VAULT_TOKEN=root vault write auth/kubernetes/config kubernetes_host=https://kubernetes.default.svc:443 disable_iss_validation=true"
+
+   # Write the Policy
+   echo 'path "secret/data/myapp/config" { capabilities = ["read"] }' > myapp-policy.hcl
+   kubectl cp myapp-policy.hcl secret-example/$VAULT_POD:/tmp/policy.hcl
+   kubectl exec $VAULT_POD -n secret-example -- sh -c "VAULT_TOKEN=root vault policy write myapp-policy /tmp/policy.hcl"
+
+   # Create the Role
+   kubectl exec $VAULT_POD -n secret-example -- sh -c "VAULT_TOKEN=root vault write auth/kubernetes/role/example-role bound_service_account_names=spring-cloud-k8s-sa bound_service_account_namespaces=secret-example policies=myapp-policy ttl=24h"
+
+   # Inject the Secret
+   kubectl exec $VAULT_POD -n secret-example -- sh -c "VAULT_TOKEN=root vault kv put secret/myapp/config password='vault-password-value'"
+   ```
+
+5. **Deploy the Unified Application**:
+   ```bash
+   kubectl apply -f k8s/deployment-all.yaml
+   ```
+
+6. **Verify**:
+   Once the pod is running, check the logs to see the injected values:
+   ```bash
+   kubectl logs -l app=secret-example-all -n secret-example -c secret-example
    ```
 
 ## Files in this example:
-- `src/main/java/com/example/secretexample/SecretController.java`: Java code reading secrets.
+- `src/main/java/com/example/secretexample/SecretLogger.java`: Java code reading and logging secrets.
 - `k8s/namespace.yaml`: Definition of the Kubernetes Namespace.
 - `k8s/secret.yaml`: Definition of the Kubernetes Secret.
-- `k8s/deployment-env.yaml`: Injection via Environment Variables.
-- `k8s/deployment-volume.yaml`: Injection via Volume Mount.
-- `k8s/deployment-configtree.yaml`: Injection via ConfigTree volume mount.
-- `k8s/deployment-spring-cloud.yaml`: Injection via Spring Cloud Kubernetes.
-- `k8s/rbac.yaml`: RBAC for Spring Cloud Kubernetes.
-- `k8s/deployment-sidecar.yaml`: Sidecar container example.
+- `k8s/rbac.yaml`: RBAC for Spring Cloud Kubernetes and Vault authentication.
+- `k8s/vault-server.yaml`: Vault server deployment.
+- `k8s/deployment-all.yaml`: Unified deployment using all 5 injection methods.
+- `deprecated/`: Contains individual deployment files for reference.
