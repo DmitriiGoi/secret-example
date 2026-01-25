@@ -97,3 +97,7 @@ data:
         }
       }
     }
+
+    vault {
+      address = "http://vault.default.svc:8200"
+    }
