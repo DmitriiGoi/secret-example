@@ -29,27 +29,22 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        # 1. Env variables mapping
-        - name: SECRET_CONFIG_TREE
+        # 1. Environment variable secret
+        - name: ENV_SECRET
           valueFrom:
             secretKeyRef:
               name: secret-app
-              key: secret-config-tree
-        - name: SECRET_ENV_VARIABLE
-          valueFrom:
-            secretKeyRef:
-              name: secret-app
-              key: secret-env-variable
+              key: env-secret
         volumeMounts:
-        # 2. ConfigTree mount
+        # 2. Volume mounted file secret
+        - name: volume-secret-mount
+          mountPath: "/etc/volume-secret"
+          readOnly: true
+        # 3. Volume mounted config tree (multiple files)
         - name: configtree-volume
-          mountPath: "/etc/config"
+          mountPath: "/etc/configtree"
           readOnly: true
-        # 3. Direct volume mount
-        - name: secret-volume
-          mountPath: "/etc/secrets"
-          readOnly: true
-        # 4. Vault sidecar mount
+        # 5. Vault sidecar mount
         - name: vault-secrets
           mountPath: /etc/vault-secrets
           readOnly: true
@@ -65,15 +60,20 @@ spec:
         - name: vault-secrets
           mountPath: /etc/vault-secrets
       volumes:
-      - name: configtree-volume
-        secret:
-          secretName: secret-app
-      - name: secret-volume
+      - name: volume-secret-mount
         secret:
           secretName: secret-app
           items:
-          - key: secret-volume
-            path: secret-volume
+          - key: volume-secret
+            path: secret-file.txt
+      - name: configtree-volume
+        secret:
+          secretName: secret-app
+          items:
+          - key: configtree-file1
+            path: configtree-file1
+          - key: configtree-file2
+            path: configtree-file2
       - name: vault-secrets
         emptyDir: {}
       - name: vault-config

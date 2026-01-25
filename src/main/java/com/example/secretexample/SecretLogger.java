@@ -18,39 +18,34 @@ public class SecretLogger {
 
     private static final Logger logger = LoggerFactory.getLogger(SecretLogger.class);
 
-    // Injected via environment variable (standard K8s env injection)
-    @Value("${SECRET_CONFIG_TREE:Not Set}")
-    private String secretConfigTreeFromEnv;
+    // 1. Injected via environment variable
+    @Value("${ENV_SECRET:Not Set}")
+    private String envSecret;
 
-    // Injected via Spring Boot property (backed by env var)
-    @Value("${SECRET_ENV_VARIABLE:Not Set}")
-    private String secretEnvVariable;
+    @Value("${env-secret:Not Set}")
+    private String envSecretFromApi;
 
-    // Injected via Spring Boot configtree (file name becomes property name)
-    @Value("${secret-config-tree:Not Set}")
-    private String secretConfigTree;
+    // 3. Injected via Spring Boot configtree (multiple files)
+    @Value("${configtree-file1:Not Set}")
+    private String configTreeFile1;
 
-    @Value("${secret-volume:Not Set}")
-    private String secretVolumeFromConfigTree;
+    @Value("${configtree-file2:Not Set}")
+    private String configTreeFile2;
 
-    // Injected via Spring Cloud Kubernetes (reads directly from K8s Secret 'secret-app')
-    @Value("${secret-spring-k8s-api:Not Set}")
-    private String secretSpringK8sApi;
+    // 4. Injected via Spring Cloud Kubernetes (reads directly from K8s Secret 'secret-app')
+    @Value("${api-secret:Not Set}")
+    private String apiSecret;
 
     @EventListener(ApplicationReadyEvent.class)
     public void logSecrets() {
         Map<String, String> secrets = new HashMap<>();
-        secrets.put("secret-config-tree (from env)", secretConfigTreeFromEnv);
-        secrets.put("secret-env-variable (from property/env)", secretEnvVariable);
-        secrets.put("secret-config-tree (from configtree)", secretConfigTree);
-        secrets.put("secret-volume (from configtree)", secretVolumeFromConfigTree);
-        secrets.put("secret-spring-k8s-api (from Spring Cloud K8s)", secretSpringK8sApi);
-
-        // Reading secret from a mounted file
-        secrets.put("secret-volume (from volume)", readFile("/etc/secrets/secret-volume"));
-
-        // Reading secret from a Vault Agent sidecar-mounted volume
-        secrets.put("secret-vault (from sidecar)", readFile("/etc/vault-secrets/vault-secret.txt"));
+        secrets.put("1. Environment variable secret", envSecret);
+        secrets.put("2. Volume mounted file secret", readFile("/etc/volume-secret/secret-file.txt"));
+        secrets.put("3a. ConfigTree secret (file 1)", configTreeFile1);
+        secrets.put("3b. ConfigTree secret (file 2)", configTreeFile2);
+        secrets.put("4. Spring K8s API secret", apiSecret);
+        secrets.put("4b. Env secret (via API)", envSecretFromApi);
+        secrets.put("5. Hashicorp Vault secret (sidecar)", readFile("/etc/vault-secrets/vault-secret.txt"));
 
         logger.info("--- Loaded Secrets ---");
         secrets.forEach((key, value) -> logger.info("{}: {}", key, value));

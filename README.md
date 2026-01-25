@@ -107,4 +107,3 @@ To build the image to a local Docker daemon:
 - `k8s/rbac.yaml`: RBAC for Spring Cloud Kubernetes and Vault authentication.
 - `k8s/vault-server.yaml`: Vault server deployment.
 - `k8s/deployment-all.yaml`: Unified deployment using all 5 injection methods.
-- `deprecated/`: Contains individual deployment files for reference.
