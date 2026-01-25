@@ -20,9 +20,10 @@ spec:
         image: hashicorp/vault-k8s:latest
         imagePullPolicy: Always
         args:
-        - agent-injector
+        - agent-inject
         - -listen=:8080
         - -log-level=info
+        - -vault-address=http://vault.default.svc:8200
         ports:
         - containerPort: 8080
 ---

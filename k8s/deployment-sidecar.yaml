@@ -27,11 +27,40 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
+        env:
+        # Env variables mapping
+        - name: SECRET_CONFIG_TREE
+          valueFrom:
+            secretKeyRef:
+              name: secret-app
+              key: secret-config-tree
+        - name: SECRET_ENV_VARIABLE
+          valueFrom:
+            secretKeyRef:
+              name: secret-app
+              key: secret-env-variable
         volumeMounts:
+        # ConfigTree mount
+        - name: configtree-volume
+          mountPath: "/etc/config"
+          readOnly: true
+        # Direct volume mount
+        - name: secret-volume
+          mountPath: "/etc/secrets"
+          readOnly: true
         - name: vault-secrets
           mountPath: /etc/vault-secrets
           readOnly: true
       volumes:
+      - name: configtree-volume
+        secret:
+          secretName: secret-app
+      - name: secret-volume
+        secret:
+          secretName: secret-app
+          items:
+          - key: secret-volume
+            path: secret-volume
       - name: vault-secrets
         emptyDir: {}
 ---
