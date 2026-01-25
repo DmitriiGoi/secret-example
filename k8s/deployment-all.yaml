@@ -53,6 +53,17 @@ spec:
         - name: vault-secrets
           mountPath: /etc/vault-secrets
           readOnly: true
+      - name: vault-agent
+        image: hashicorp/vault:latest
+        imagePullPolicy: Always
+        args:
+        - agent
+        - -config=/etc/vault/config.hcl
+        volumeMounts:
+        - name: vault-config
+          mountPath: /etc/vault
+        - name: vault-secrets
+          mountPath: /etc/vault-secrets
       volumes:
       - name: configtree-volume
         secret:
@@ -65,6 +76,9 @@ spec:
             path: secret-volume
       - name: vault-secrets
         emptyDir: {}
+      - name: vault-config
+        configMap:
+          name: vault-agent-config
 ---
 apiVersion: v1
 kind: Service
