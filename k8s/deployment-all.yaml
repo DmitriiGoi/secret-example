@@ -12,6 +12,14 @@ spec:
     metadata:
       labels:
         app: secret-example-all
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "example-role"
+        vault.hashicorp.com/agent-inject-secret-vault-secret.txt: "secret/data/myapp/config"
+        vault.hashicorp.com/agent-inject-template-vault-secret.txt: |
+          {{ with secret "secret/data/myapp/config" }}
+          db.password: {{ .Data.data.password }}
+          {{ end }}
     spec:
       serviceAccountName: spring-cloud-k8s-sa
       containers:
@@ -45,17 +53,6 @@ spec:
         - name: vault-secrets
           mountPath: /etc/vault-secrets
           readOnly: true
-      - name: vault-agent
-        image: hashicorp/vault:latest
-        imagePullPolicy: Always
-        args:
-          - agent
-          - -config=/etc/vault/config.hcl
-        volumeMounts:
-        - name: vault-secrets
-          mountPath: /etc/vault-secrets
-        - name: vault-config
-          mountPath: /etc/vault
       volumes:
       - name: configtree-volume
         secret:
@@ -68,9 +65,6 @@ spec:
             path: secret-volume
       - name: vault-secrets
         emptyDir: {}
-      - name: vault-config
-        configMap:
-          name: vault-agent-config
 ---
 apiVersion: v1
 kind: Service

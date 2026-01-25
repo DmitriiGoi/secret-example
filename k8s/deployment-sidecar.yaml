@@ -12,6 +12,14 @@ spec:
     metadata:
       labels:
         app: secret-example-sidecar
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "example-role"
+        vault.hashicorp.com/agent-inject-secret-vault-secret.txt: "secret/data/myapp/config"
+        vault.hashicorp.com/agent-inject-template-vault-secret.txt: |
+          {{ with secret "secret/data/myapp/config" }}
+          db.password: {{ .Data.data.password }}
+          {{ end }}
     spec:
       containers:
       - name: secret-example
@@ -21,25 +29,11 @@ spec:
         - containerPort: 8080
         volumeMounts:
         - name: vault-secrets
-          mountPath: /etc/secrets
+          mountPath: /etc/vault-secrets
           readOnly: true
-      - name: vault-agent
-        image: hashicorp/vault:latest
-        imagePullPolicy: Always
-        args:
-          - agent
-          - -config=/etc/vault/config.hcl
-        volumeMounts:
-        - name: vault-secrets
-          mountPath: /etc/secrets
-        - name: vault-config
-          mountPath: /etc/vault
       volumes:
       - name: vault-secrets
         emptyDir: {}
-      - name: vault-config
-        configMap:
-          name: vault-agent-config
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -50,6 +44,15 @@ data:
   config.hcl: |
     exit_after_auth = false
     pid_file = "/home/vault/pid"
+
+    template {
+      contents = <<EOH
+      {{ with secret "secret/data/myapp/config" }}
+      db.password: {{ .Data.data.password }}
+      {{ end }}
+      EOH
+      destination = "/etc/vault-secrets/vault-secret.txt"
+    }
 
     auto_auth {
       method "kubernetes" {
@@ -64,13 +67,4 @@ data:
           path = "/home/vault/.vault-token"
         }
       }
-    }
-
-    template {
-      contents = <<EOH
-      {{ with secret "secret/data/myapp/config" }}
-      db.password: {{ .Data.data.password }}
-      {{ end }}
-      EOH
-      destination = "/etc/vault-secrets/vault-secret.txt"
     }
